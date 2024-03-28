@@ -3,88 +3,80 @@
 
 #include <JPEGDecoder.h>
 
-void DisplayModule::RenderJpg(int xpos, int ypos, int w, int h) {
-    uint16_t  *pImg;
-    int16_t mcu_w = JpegDec.MCUWidth;
-    int16_t mcu_h = JpegDec.MCUHeight;
+void DisplayModule::RenderJpg(int xpos, int ypos, int w, int h, Card* card) {
+    static lv_obj_t* img_obj = nullptr;
 
-    // Calculate the max_x and max_y for the rendered image based on input w and h
-    int32_t max_x = (w <= 0) ? JpegDec.width : min(w, JpegDec.width);
-    int32_t max_y = (h <= 0) ? JpegDec.height : min(h, JpegDec.height);
+    if(img_obj == nullptr) {
+        img_obj = lv_img_create(lv_scr_act());
+    }
 
-    // Determine the width and height of the right and bottom edge image blocks
-    int32_t min_w = minimum(mcu_w, max_x % mcu_w);
-    int32_t min_h = minimum(mcu_h, max_y % mcu_h);
+    lv_img_set_src(img_obj, &card ? card->imageBuffer : logo_jpg);
+    lv_obj_set_pos(img_obj, xpos, ypos); 
 
-    // Adjust min_w and min_h for cases where image is smaller than one MCU
-    min_w = (min_w == 0) ? mcu_w : min_w;
-    min_h = (min_h == 0) ? mcu_h : min_h;
-
-    // Save the coordinate of the right and bottom edges to assist image cropping
-    int32_t draw_max_x = xpos + max_x;
-    int32_t draw_max_y = ypos + max_y;
-
-    // Loop through all the MCUs in the JPEG
-    while (JpegDec.readSwappedBytes()) { // Swapped byte order read
-        // Get a pointer to the MCU image block
-        pImg = JpegDec.pImage;
-
-        // Calculate where the image block should be drawn on the screen
-        int mcu_x = JpegDec.MCUx * mcu_w + xpos;
-        int mcu_y = JpegDec.MCUy * mcu_h + ypos;
-
-        // Determine the size of this MCU block
-        int draw_w = ((mcu_x + mcu_w) <= draw_max_x) ? mcu_w : (draw_max_x - mcu_x);
-        int draw_h = ((mcu_y + mcu_h) <= draw_max_y) ? mcu_h : (draw_max_y - mcu_y);
-
-        // Draw image MCU block only if it will fit on the screen
-        if (mcu_x < tft.width() && mcu_y < tft.height() && draw_w > 0 && draw_h > 0) {
-            tft.pushImage(mcu_x, mcu_y, draw_w, draw_h, pImg);
-            if (w > 0 && h > 0)
-            {
-                tft.fillRect(xpos + w - 3, ypos, 3, h, TFT_BLACK);
-            }
-        }
-
-        // Abort the drawing if we've reached the bottom of the intended drawing area
-        if (mcu_y >= draw_max_y) JpegDec.abort();
+    
+    if(w > 0 && h > 0) {
+        lv_obj_set_size(img_obj, w, h);
+        lv_img_set_antialias(img_obj, true);
     }
 }
 
 void DisplayModule::UpdateSplashStatus(const char* Text, int Percent)
 {
-    Splash.Text = Text;
-    Splash.Progress = Percent;
-
-    if (logo_jpg != nullptr) {
-        boolean decoded = JpegDec.decodeArray(logo_jpg, logo_jpg_size);
-        if (decoded) {
-            int xpos = (240 - JpegDec.width) / 2; 
-            int ypos = (320 - 100 - JpegDec.height) / 2; 
-            RenderJpg(xpos, ypos);
-        }
-    }
+    lv_obj_t* splash_screen = Splash.splash_screen;
+    lv_obj_t* splash_label = Splash.splash_label;
+    lv_obj_t* splash_image = Splash.splash_image;
+    lv_obj_t* splash_progress_bar = Splash.splash_progress_bar;
 
    
-    tft.setTextDatum(MC_DATUM);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    if(splash_screen == nullptr) {
+        splash_screen = lv_obj_create(NULL);
+        lv_obj_set_size(splash_screen, 240, 320);
+        lv_obj_clear_flag(splash_screen, LV_OBJ_FLAG_SCROLLABLE);
+
+       
+        if(logo_jpg != nullptr && splash_image == nullptr) {
+            splash_image = lv_img_create(splash_screen);
+            lv_img_set_src(splash_image, logo_jpg);
+            lv_obj_align(splash_image, LV_ALIGN_CENTER, 0, -50);
+        }
+
+        
+        splash_label = lv_label_create(splash_screen);
+        lv_obj_align(splash_label, LV_ALIGN_CENTER, 0, 50);
+
+        
+        splash_progress_bar = lv_bar_create(splash_screen);
+        lv_obj_set_size(splash_progress_bar, 200, 20); 
+        lv_obj_align(splash_progress_bar, LV_ALIGN_BOTTOM_MID, 0, -30);
+        lv_bar_set_range(splash_progress_bar, 0, 100);
+    }
+
     
-    int textYpos = (320 - JpegDec.height - 30) / 2 + JpegDec.height + 10;
-    tft.drawString(Splash.Text, 120, textYpos, 2);
+    if(Text != nullptr) {
+        lv_label_set_text(splash_label, Text);
+    }
+
     
-   if (Splash.Progress > 99)
-   {
-    delay(1000);
-    tft.fillScreen(TFT_BLACK);
-    IsOnSplash = false;
-    tft.setRotation(1);
-    drawMainMenu();
-   }
+    if(splash_progress_bar != nullptr) {
+        lv_bar_set_value(splash_progress_bar, Percent, LV_ANIM_OFF);
+    }
+
+    
+    if (Percent > 99) {
+        delay(1000);
+        lv_obj_del_async(splash_screen);
+        splash_screen = nullptr;
+        splash_label = nullptr;
+        splash_image = nullptr;
+        splash_progress_bar = nullptr;
+        drawMainMenu();
+    }
 }
 
 void DisplayModule::drawMainMenu()
 {
-    tft.fillScreen(TFT_BLACK);
+    lv_main_menu = lv_obj_create(NULL);
+    lv_obj_set_size(lv_main_menu, LV_HOR_RES, LV_VER_RES);
 
     for (int i = 0; i < numCards; i++) {
         drawCard(cards[i]);
@@ -101,17 +93,26 @@ void DisplayModule::setButtonCallback(int buttonIndex, void (*callback)()) {
 }
 
 void DisplayModule::animateCardPop(const Card &card) {
-    int expandAmount = 4;
-    for (int i = 0; i <= expandAmount; i += 2) {
-        tft.fillRect(card.x - i, card.y - i, card.w + 2*i, card.h + 2*i, card.isSelected ? TFT_RED : card.bgColor);
-        tft.drawRect(card.x - i, card.y - i, card.w + 2*i, card.h + 2*i, TFT_WHITE);  // Card outline
-        delay(15);
-    }
-    for (int i = expandAmount; i >= 0; i -= 2) {
-        tft.fillRect(card.x - i, card.y - i, card.w + 2*i, card.h + 2*i, TFT_BLACK);  // Erase previous size
-        drawCard(card);
-        delay(15);
-    }
+    static lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, card.Object);
+    lv_anim_set_time(&a, 150);
+    lv_anim_set_playback_time(&a, 150);
+    lv_anim_set_playback_delay(&a, 0);
+
+    lv_anim_set_exec_cb(&a, [](void *obj, int32_t v) { lv_obj_set_width((lv_obj_t*)obj, v); });
+    lv_anim_set_values(&a, lv_obj_get_width(card.Object), lv_obj_get_width(card.Object) + 8); // Increase width
+    lv_anim_start(&a);
+
+    lv_anim_set_exec_cb(&a, [](void *obj, int32_t v) { lv_obj_set_height((lv_obj_t*)obj, v); });
+    lv_anim_set_values(&a, lv_obj_get_height(card.Object), lv_obj_get_height(card.Object) + 8); // Increase height
+    lv_anim_start(&a);
+
+    static lv_style_t style;
+    lv_style_init(&style);
+    lv_style_set_border_color(&style, lv_color_make(255, 0, 0)); // Red border
+    lv_style_set_border_width(&style, 2);
+    lv_obj_add_style(card.Object, &style, 0);
 }
 
 void DisplayModule::checkTouch(int tx, int ty) {
@@ -138,24 +139,42 @@ void DisplayModule::checkTouch(int tx, int ty) {
 }
 
 void DisplayModule::drawSelectedLabel(const String &label) {
-    tft.fillRect(0, 0, 240, 30, TFT_BLACK);
-    tft.setTextColor(TFT_WHITE);
-    tft.setTextSize(1);
-    tft.drawString(label, 5, 10, 2);
+    if(label_obj == nullptr) {
+        label_obj = lv_label_create(lv_scr_act());
+        lv_label_set_long_mode(label_obj, LV_LABEL_LONG_WRAP);
+        lv_obj_set_width(label_obj, 240);
+        lv_obj_align(label_obj, LV_ALIGN_TOP_LEFT, 5, 10);
+    }
+
+
+    lv_label_set_text(label_obj, label.c_str());
+
+
+    static lv_style_t style;
+    lv_style_init(&style);
+    lv_style_set_text_color(&style, lv_color_white());
+    lv_style_set_bg_color(&style, lv_color_black());
+    lv_style_set_bg_opa(&style, LV_OPA_COVER);
+    lv_obj_add_style(label_obj, &style, 0);
 }
 
-void DisplayModule::drawCard(const Card &card) {
+void DisplayModule::drawCard(Card &card) {
     if (card.imageBuffer != nullptr) {
-        bool decoded = JpegDec.decodeArray(card.imageBuffer, card.imagebuffersize);
-        
-        if (decoded)
-        {
-            RenderJpg(card.x, card.y, card.w, card.h);
-        }
+        RenderJpg(card.x, card.y, card.w, card.h, &card);
     }
     else 
     {
-        tft.fillRect(card.x, card.y, card.w, card.h, card.bgColor);
+        card.Object = lv_obj_create(lv_scr_act());
+
+        lv_obj_set_pos(card.Object, card.x, card.y);
+
+        lv_obj_set_size(card.Object, card.w, card.h);
+        
+        static lv_style_t style;
+        lv_style_init(&style);
+        lv_style_set_bg_opa(&style, LV_OPA_COVER);
+        lv_style_set_bg_color(&style, lv_color_make(card.bgColor >> 16, (card.bgColor >> 8) & 0xFF, card.bgColor & 0xFF));
+        lv_obj_add_style(card.Object, &style, 0);
     }
 }
 
@@ -166,9 +185,8 @@ void DisplayModule::Init()
     ts.begin();
     ts.setRotation(1);
     tft.init();
-    tft.setRotation(0);
+    tft.setRotation(1);
     tft.fillScreen(TFT_BLACK);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
 }
 
 void DisplayModule::printTouchToSerial(TS_Point p) {

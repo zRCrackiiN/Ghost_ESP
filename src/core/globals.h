@@ -71,7 +71,6 @@ inline NeopixelModule* neopixelmodule;
 
 #ifdef DISPLAY_SUPPORT
 #include "../components/display_module/display_module.h"
-#include "../lib/TFT_eSPI/User_Setup.h"
 inline DisplayModule* displaymodule;
 #endif
 

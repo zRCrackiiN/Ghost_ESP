@@ -7,6 +7,7 @@
 
 #ifdef DISPLAY_SUPPORT
 #include <TFT_eSPI.h>
+#include "lvgl.h"
 #include <XPT2046_Touchscreen.h>
 #include <LinkedList.h>
 #include <core/images/bt.h>
@@ -21,6 +22,10 @@ struct SplashScreen
     int Progress;
     const char* lastSplashText = "";
     int lastSplashProgress = -1;
+    lv_obj_t* splash_screen;
+    lv_obj_t* splash_label;
+    lv_obj_t* splash_image;
+    lv_obj_t* splash_progress_bar;
 };
 
 enum MenuType
@@ -39,6 +44,7 @@ struct Card {
     bool isSelected;
     const unsigned char* imageBuffer;
     const int imagebuffersize;
+    lv_obj_t* Object;
 };
 
 const int numCards = 3;
@@ -51,24 +57,24 @@ const int yOffset = (240 - cardHeight) / 2;  // Center cards height-wise
 class DisplayModule {
 public:
     SPIClass mySpi = SPIClass(VSPI);
-    TFT_eSPI tft = TFT_eSPI();
-    TFT_eSprite spr = TFT_eSprite(&tft);
     uint16_t backgroundColor, buttonColor, textColor, buttonTextColor;
     bool IsOnSplash;
     MenuType mtype;
+    TFT_eSPI tft = TFT_eSPI();
     SplashScreen Splash;
 
-
+    lv_obj_t* lv_main_menu;
+    lv_obj_t *label_obj;
     Card cards[numCards] = {
-        {xOffset, yOffset, cardWidth, cardHeight, "BLE Attacks", TFT_WHITE, TFT_BLACK, false, bt_jpg, bt_jpg_size},
-        {xOffset + cardWidth + cardSpacing, yOffset, cardWidth, cardHeight, "WiFi Utils", TFT_WHITE, TFT_BLACK, false, nullptr, 0},
-        {xOffset + 2 * (cardWidth + cardSpacing), yOffset, cardWidth, cardHeight, "Led Utils", TFT_WHITE, TFT_BLACK, false, nullptr, 0}
+        {xOffset, yOffset, cardWidth, cardHeight, "BLE Attacks", 0, 0, false, bt_jpg, bt_jpg_size},
+        {xOffset + cardWidth + cardSpacing, yOffset, cardWidth, cardHeight, "WiFi Utils", 0, 0, false, nullptr, 0},
+        {xOffset + 2 * (cardWidth + cardSpacing), yOffset, cardWidth, cardHeight, "Led Utils", 0, 0, false, nullptr, 0}
     };
 
-    DisplayModule() : backgroundColor(TFT_BLACK), buttonColor(TFT_BLUE),
-                      textColor(TFT_WHITE),
-                      buttonTextColor(TFT_WHITE) {
-        tft = TFT_eSPI(TFT_WIDTH, TFT_HEIGHT); // Initialize display
+    DisplayModule() : backgroundColor(0), buttonColor(0),
+                      textColor(0),
+                      buttonTextColor(0) {
+        lv_init();
     }
     int LastTouchX;
     int LastTouchY;
@@ -76,12 +82,12 @@ public:
     void drawSelectedLabel(const String &label);
     void animateMenu();
     void animateCardPop(const Card &card);
-    void drawCard(const Card &card);
+    void drawCard(Card &card);
     void setButtonCallback(int buttonIndex, void (*callback)());
     void checkTouch(int tx, int ty);
     void UpdateSplashStatus(const char* Text, int Percent);
     void Init();
-    void RenderJpg(int x, int y, int w = 0, int h = 0);
+    void RenderJpg(int x, int y, int w = 0, int h = 0, Card* card = nullptr);
     void printTouchToSerial(TS_Point p);
 };
 
