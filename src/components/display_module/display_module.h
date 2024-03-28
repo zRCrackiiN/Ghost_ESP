@@ -56,12 +56,14 @@ const int yOffset = (240 - cardHeight) / 2;  // Center cards height-wise
 
 class DisplayModule {
 public:
-    SPIClass mySpi = SPIClass(VSPI);
+    SPIClass mySpi = SPIClass(HSPI);
     uint16_t backgroundColor, buttonColor, textColor, buttonTextColor;
     bool IsOnSplash;
     MenuType mtype;
     TFT_eSPI tft = TFT_eSPI();
     SplashScreen Splash;
+    uint8_t* draw_buf;
+    lv_indev_t * indev;
 
     lv_obj_t* lv_main_menu;
     lv_obj_t *label_obj;
@@ -74,20 +76,20 @@ public:
     DisplayModule() : backgroundColor(0), buttonColor(0),
                       textColor(0),
                       buttonTextColor(0) {
-        lv_init();
     }
     int LastTouchX;
     int LastTouchY;
     void drawMainMenu();
-    void drawSelectedLabel(const String &label);
+    void TouchPadRead();
+    void drawSelectedLabel(String &label);
     void animateMenu();
-    void animateCardPop(const Card &card);
+    void animateCardPop(Card &card);
     void drawCard(Card &card);
     void setButtonCallback(int buttonIndex, void (*callback)());
     void checkTouch(int tx, int ty);
     void UpdateSplashStatus(const char* Text, int Percent);
     void Init();
-    void RenderJpg(int x, int y, int w = 0, int h = 0, Card* card = nullptr);
+    void RenderJpg(int x, int y, int w = 0, int h = 0);
     void printTouchToSerial(TS_Point p);
 };
 
