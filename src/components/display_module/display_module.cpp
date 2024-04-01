@@ -174,11 +174,13 @@ void DisplayModule::Init()
     IsOnSplash = true;
     mySpi.begin(XPT2046_CLK, XPT2046_MISO, XPT2046_MOSI, XPT2046_CS);
     ts.begin();
-    ts.setRotation(0);
+    ts.setRotation(4);
     tft.init();
     tft.setRotation(0);
     tft.fillScreen(TFT_BLACK);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    uint16_t calData[5] = { 350, 3465, 188, 3431, 2 };
+    tft.setTouch(calData);
 }
 
 void DisplayModule::printTouchToSerial(TS_Point p) {

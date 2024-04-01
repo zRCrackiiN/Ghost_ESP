@@ -46,8 +46,8 @@ const int numCards = 3;
 const int cardWidth = 50;
 const int cardHeight = 50;
 const int cardSpacing = 15;
-const int xOffset = 80;      // Starting x-offset from left of the screen, adjust based on preference
-const int yOffset = (240 - cardHeight) / 2;  // Center cards height-wise
+const int xOffset = 98;      // Starting x-offset from left of the screen, adjust based on preference
+const int yOffset = (180 - cardHeight) / 2;  // Center cards height-wise
 
 class DisplayModule {
 public:
@@ -63,8 +63,8 @@ public:
 
     Card cards[numCards] = {
         {xOffset, yOffset, cardWidth, cardHeight, "BLE Attacks", TFT_WHITE, TFT_BLACK, false, bt_jpg, bt_jpg_size},
-        {xOffset + cardWidth + cardSpacing, yOffset, cardWidth, cardHeight, "WiFi Utils", TFT_WHITE, TFT_BLACK, false, nullptr, 0},
-        {xOffset + 2 * (cardWidth + cardSpacing), yOffset, cardWidth, cardHeight, "Led Utils", TFT_WHITE, TFT_BLACK, false, nullptr, 0}
+        {xOffset, yOffset + cardWidth + cardSpacing, cardWidth, cardHeight, "WiFi Utils", TFT_WHITE, TFT_BLACK, false, nullptr, 0},
+        {xOffset, yOffset + 2 * (cardWidth + cardSpacing), cardWidth, cardHeight, "Led Utils", TFT_WHITE, TFT_BLACK, false, nullptr, 0}
     };
 
     DisplayModule() : backgroundColor(TFT_BLACK), buttonColor(TFT_BLUE),
