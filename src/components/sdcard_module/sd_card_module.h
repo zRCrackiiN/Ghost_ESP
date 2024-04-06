@@ -1,12 +1,14 @@
 #pragma once
 
-#include "board_config.h" // Include the main configuration header
+#include "board_config.h" 
 
-#ifdef SD_CARD_CS_PIN // Only include this class if the SD card is supported
+#ifdef SD_CARD_CS_PIN
 
+#include <Arduino.h>
 #include <SD.h>
+#include <SD_MMC.h>
 
-// Pcap Global Header Format
+
 struct pcap_global_header {
     uint32_t magic_number;   // Magic number
     uint16_t version_major;  // Major version number
@@ -34,8 +36,8 @@ public:
     bool appendFile(const char *path, const char *message);
     bool deleteFile(const char *path);
     bool logMessage(const char *logFileName, const char* foldername, String message);
-    bool startPcapLogging(const char *path);
-    bool logPacket(const char *path, const uint8_t *packet, uint32_t length);
+    bool startPcapLogging(const char *path,bool bluetooth = false);
+    bool logPacket(const uint8_t *packet, uint32_t length);
     void flushLog();
     void stopPcapLogging();
 
@@ -43,6 +45,7 @@ private:
     int csPin;
     int BootNum;
     bool Initlized;
+    bool IsMMCCard;
     int PcapFileIndex;
     File logFile;
     unsigned long bufferLength = 0;
@@ -54,6 +57,14 @@ private:
         65535, // snaplen
         1 // Network - assuming Ethernet
     };
+    FS* createFileSystem(bool isMMCCard) {
+        if (isMMCCard) {
+            return &SD_MMC;
+        } else {
+            return &SD;
+        }
+    }
+    FS* SDI;
 };
 
 #endif // SD_CARD_CS_PIN

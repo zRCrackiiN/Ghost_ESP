@@ -13,12 +13,6 @@ class WiFiModule;
 inline WiFiModule* wifimodule;
 inline bool RainbowLEDActive;
 
-struct SerialCallback {
-    std::function<bool(String&)> condition;
-    std::function<void(String&)> callback;
-    int CallbackID;
-};
-
 
 inline void stringToUint8Array(String inputString, uint8_t* outputArray, int maxOutputLength) {
     int byteIndex = 0;
@@ -33,15 +27,14 @@ inline void stringToUint8Array(String inputString, uint8_t* outputArray, int max
     }
 }
 
-inline LinkedList<SerialCallback> callbacks;
-
-inline void registerCallback(const std::function<bool(String&)>& condition, const std::function<void(String&)>& callback) {
-    int CallbackID = callbacks.size() + 1;
-    callbacks.add({condition, callback, CallbackID});
-}
-
-inline void clearCallbacks() {
-    callbacks.clear();
+inline String bytesToHexString(const uint8_t* bytes, size_t length) {
+    String str = "";
+    for (size_t i = 0; i < length; ++i) {
+        // Convert each byte to Hex and append to the string
+        if (bytes[i] < 16) str += '0'; // Add leading zero for values less than 0x10
+        str += String(bytes[i], HEX);
+    }
+    return str;
 }
 
 #ifdef HAS_BT
@@ -87,7 +80,7 @@ inline LEDThreads Threadinfo;
 inline void BreatheTask()
 {
 #ifdef OLD_LED
-    rgbmodule->breatheLED(Threadinfo.TargetPin, 500);
+    rgbmodule->breatheLED(Threadinfo.TargetPin, 100);
 #endif
 }
 
